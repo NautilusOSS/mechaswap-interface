@@ -17,7 +17,7 @@ import NFTListingTable from "../../components/NFTListingTable";
 import RankingList from "../../components/RankingList";
 import ToggleButtons from "../../components/RankingFilterToggleButtons";
 import { Stack } from "@mui/material";
-import { getTokens, updateToken } from "../../store/tokenSlice";
+import { getTokens, updateToken } from "../../store/nftTokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import { getCollections } from "../../store/collectionSlice";
 import {

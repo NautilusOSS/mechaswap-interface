@@ -13,7 +13,7 @@ import { getSales } from "../../store/saleSlice";
 import { getPrices } from "../../store/dexSlice";
 import { CTCINFO_LP_WVOI_VOI } from "../../contants/dex";
 import { UnknownAction } from "@reduxjs/toolkit";
-import { getTokens } from "../../store/tokenSlice";
+import { getTokens } from "../../store/nftTokenSlice";
 import { getListings } from "../../store/listingSlice";
 import { getCollections } from "../../store/collectionSlice";
 

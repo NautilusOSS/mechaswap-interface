@@ -34,10 +34,17 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
       <BackgroundLayer
         className="background-layer"
         style={{
-          background: isDarkTheme ? "#161717" : "#FFFFFF",
+          background: "#AB47BC", // isDarkTheme ? "#161717" : "#FFFFFF",
         }}
       ></BackgroundLayer>
-      <div className="content-layer" style={{ width: "100%", height: "100%" }}>
+      <div
+        className="content-layer"
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+        }}
+      >
         {children}
       </div>
     </div>
@@ -52,7 +59,7 @@ const App: React.FC = () => {
         <PersistGate loading={null} persistor={persistor}>
           <AppContainer>
             <Router>
-              <Navbar />
+              {/*<Navbar />*/}
               <Routes>
                 {routes.map((el) => (
                   <Route path={el.path} Component={el.Component} />

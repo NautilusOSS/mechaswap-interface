@@ -27,7 +27,6 @@ const WalletIcon2 = () => {
   );
 };
 
-
 const WalletIconContainer = styled.div`
   display: flex;
   padding: var(--Main-System-8px, 8px);
@@ -604,11 +603,13 @@ function BasicMenu() {
                               >
                                 Set Active
                               </ActiveButton>
-                            ) : (
+                            ) : null
+                            /*
                               <Link to={`/account/${account.address}`}>
                                 <ActiveButton>View gallery</ActiveButton>
                               </Link>
-                            )}
+                              */
+                            }
                           </ActiveButtonContainer>
                         </AccountContainer>
                       );

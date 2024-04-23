@@ -1,20 +1,22 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import themeReducer, { ThemeState } from "./themeSlice";
-import tokenReducer, { TokensState } from "./tokenSlice";
+//import tokenReducer, { TokensState } from "./nftTokenSlice";
 import collectionReducer, { CollectionsState } from "./collectionSlice";
 import saleReducer, { SalesState } from "./saleSlice";
 import dexReducer, { DexState } from "./dexSlice";
 import listingReducer, { ListingsState } from "./listingSlice";
+import tokenReducer, { TokensState } from "./tokenSlice";
 import storage from "redux-persist/lib/storage"; // Defaults to localStorage for web
 import { persistStore, persistReducer } from "redux-persist";
 
 export type RootState = {
-  tokens: TokensState;
+  //tokens: TokensState;
   collections: CollectionsState;
   sales: SalesState;
   listings: ListingsState;
   theme: ThemeState;
   dex: DexState;
+  tokens: TokensState;
 };
 
 const persistConfig = {

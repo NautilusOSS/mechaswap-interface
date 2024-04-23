@@ -170,3 +170,11 @@ export interface ActivityI {
   buyer: string;
   price: number;
 }
+
+export interface ARC200TokenI {
+  tokenId: number;
+  name: string;
+  symbol: string;
+  decimals: number;
+  totalSupply: BigInt;
+}

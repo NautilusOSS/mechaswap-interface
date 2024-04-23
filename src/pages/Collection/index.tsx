@@ -27,7 +27,7 @@ import { getPrices } from "../../store/dexSlice";
 import { CTCINFO_LP_WVOI_VOI } from "../../contants/dex";
 import NftCard from "../../components/NFTCard";
 import { getListings } from "../../store/listingSlice";
-import { getTokens } from "../../store/tokenSlice";
+import { getTokens } from "../../store/nftTokenSlice";
 
 const StatContainer = styled(Stack)`
   display: flex;

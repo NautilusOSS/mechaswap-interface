@@ -19,7 +19,7 @@ import { CTCINFO_LP_WVOI_VOI } from "../../contants/dex";
 import { decodeRoyalties } from "../../utils/hf";
 import NFTCard2 from "../../components/NFTCard2";
 import { getListings } from "../../store/listingSlice";
-import { getTokens } from "../../store/tokenSlice";
+import { getTokens } from "../../store/nftTokenSlice";
 import { getSales } from "../../store/saleSlice";
 
 const CryptoIcon = styled.img`

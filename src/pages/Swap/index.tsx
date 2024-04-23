@@ -8,6 +8,7 @@ import {
   Container,
   Grid,
   IconButton,
+  Popper,
   Skeleton,
   Table,
   TableBody,
@@ -15,9 +16,8 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Popper,
 } from "@mui/material";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import styled from "styled-components";
@@ -47,6 +47,8 @@ import { arc200_balanceOf } from "ulujs/types/arc200";
 import BigNumber from "bignumber.js";
 import WalletIcon from "static/icon-wallet.svg";
 import RecycleIcon from "static/icon-recyclebin.svg";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import { useCopyToClipboard } from "usehooks-ts";
 
 const ActivityFilterContainer = styled.div`
   display: flex;
@@ -223,27 +225,25 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffledArray;
 }
 
-const InterstitialBanner = () => {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        top: 0,
-        left: 0,
-        position: "absolute",
-        height: "100%",
-        width: "100%",
-      }}
-    >
-      <img src="/img/banner-mecha-swap.png" style={{ width: "100%" }} />
-    </div>
-  );
-};
+const mp212 = 40433943;
 
-export const Home: React.FC = () => {
-  const navigate = useNavigate();
+export const Swap: React.FC = () => {
+  const { id: swapIdStr } = useParams();
+  const swapId = parseInt(swapIdStr || "0");
+
+  const [copiedText, copy] = useCopyToClipboard();
+
+  const handleCopy = (text: string) => () => {
+    copy(text)
+      .then(() => {
+        toast.success("Copied sharable link!");
+      })
+      .catch((error: any) => {
+        toast.error("Failed to copy!");
+      });
+  };
+
+  console.log({ swapId });
   const {
     activeAccount,
     providers,
@@ -256,21 +256,93 @@ export const Home: React.FC = () => {
   const [owner, setOwner] = useState();
   const [tokens2, setTokens2] = useState<any[]>([]);
   const [selectedToken2, setSelectedToken2] = useState<any>();
-
+  const [swap, setSwap] = useState<any>();
+  const [lastRound, setLastRound] = useState(0);
   useEffect(() => {
-    if (!activeAccount) return;
-    const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?owner=${activeAccount.address}`;
+    const { algodClient } = getAlgorandClients();
+    algodClient
+      .status()
+      .do()
+      .then((r: any) => {
+        const lastRound = r["last-round"];
+        setLastRound(lastRound);
+      });
+  }, []);
+  useEffect(() => {
+    if (!swap) return;
+    const { contractId, tokenId } = swap;
+    const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?contractId=${contractId}&tokenId=${tokenId}`;
     axios.get(url).then(({ data }) => {
       setTokens(data.tokens);
+      const [selectedToken] = data.tokens;
+      setSelectedToken(selectedToken);
+      const tm = JSON.parse(selectedToken.metadata);
+      setSelectedToken({
+        ...selectedToken,
+        metadata: tm,
+      });
     });
-  }, [activeAccount]);
+  }, [swap]);
   useEffect(() => {
-    if (!owner) return;
-    const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?owner=${owner}`;
+    if (!swap) return;
+    const { contractId2: contractId, tokenId2: tokenId } = swap;
+    const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?contractId=${contractId}&tokenId=${tokenId}`;
     axios.get(url).then(({ data }) => {
       setTokens2(data.tokens);
+      const [selectedToken] = data.tokens;
+      const tm = JSON.parse(selectedToken.metadata);
+      setSelectedToken2({
+        ...selectedToken,
+        metadata: tm,
+      });
     });
-  }, [owner]);
+  }, [swap]);
+  console.log({ tokens, tokens2, selectedToken, selectedToken2 });
+  useEffect(() => {
+    const customABI = {
+      name: "",
+      desc: "",
+      methods: [
+        // v_swap_listingByIndex(uint256)(uint64,uint256,uint64,uint256,uint64)
+        {
+          name: "v_swap_listingByIndex",
+          args: [
+            {
+              type: "uint256",
+              name: "index",
+            },
+          ],
+          returns: {
+            type: "(uint64,uint256,uint64,uint256,uint64)",
+          },
+        },
+      ],
+      events: [],
+    };
+    const { algodClient, indexerClient } = getAlgorandClients();
+    const ci = new CONTRACT(mp212, algodClient, indexerClient, customABI, {
+      addr:
+        activeAccount?.address ||
+        "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ",
+      sk: new Uint8Array(0),
+    });
+    ci.v_swap_listingByIndex(swapId).then((r: any) => {
+      if (r.success) {
+        const [contractId, tokenId, contractId2, tokenId2, endTime] =
+          r.returnValue;
+        if (endTime !== BigInt(0)) {
+          setSwap({
+            contractId: Number(contractId),
+            tokenId: Number(tokenId),
+            contractId2: Number(contractId2),
+            tokenId2: Number(tokenId2),
+            endTime: Number(endTime),
+          });
+        }
+      }
+    });
+  }, [swapId, activeAccount]);
+  console.log({ swap });
   const handleWalletIconClick = () => {
     if (activeAccount) return;
     const provider = providers?.find((el) => el.metadata?.id === "kibisis");
@@ -283,7 +355,6 @@ export const Home: React.FC = () => {
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
-    const mp212 = 40433943;
     const { algodClient, indexerClient } = getAlgorandClients();
     const status = await algodClient.status().do();
     const lastRound = status["last-round"];
@@ -300,73 +371,41 @@ export const Home: React.FC = () => {
             type: "void",
           },
         },
-        // a_swap_list(uint64,uint256,uint64,uint256,uint64)uint256
+        // a_swap_execute(uint256)void
         {
-          name: "a_swap_list",
-          args: [
-            {
-              type: "uint64",
-              name: "contractId",
-            },
-            {
-              type: "uint256",
-              name: "tokenId",
-            },
-            {
-              type: "uint64",
-              name: "collectionId2",
-            },
-            {
-              type: "uint256",
-              name: "tokenId2",
-            },
-            {
-              type: "uint64",
-              name: "endTime",
-            },
-          ],
-          returns: {
-            type: "uint256",
-          },
-        },
-      ],
-      events: [
-        {
-          name: "e_swap_ListEvent",
+          name: "a_swap_execute",
           args: [
             {
               type: "uint256",
               name: "listingId",
             },
-            {
-              type: "uint64",
-              name: "contractId",
-            },
-            {
-              type: "uint256",
-              name: "tokenId",
-            },
-            {
-              type: "uint64",
-              name: "contractId2",
-            },
-            {
-              type: "uint256",
-              name: "tokenId2",
-            },
-            {
-              type: "uint64",
-              name: "endTime",
-            },
           ],
+          returns: {
+            type: "void",
+          },
         },
       ],
+      events: [],
     };
-    const ci = new CONTRACT(mp212, algodClient, indexerClient, customABI, {
+    const VIA = 6779767;
+    const ci = new CONTRACT(VIA, algodClient, indexerClient, customABI, {
       addr: activeAccount.address,
       sk: new Uint8Array(0),
     });
     const builder = {
+      arc200: new CONTRACT(
+        VIA,
+        algodClient,
+        indexerClient,
+        abi.arc200,
+        {
+          addr: activeAccount.address,
+          sk: new Uint8Array(0),
+        },
+        true,
+        false,
+        true
+      ),
       mp212: new CONTRACT(
         mp212,
         algodClient,
@@ -381,7 +420,7 @@ export const Home: React.FC = () => {
         true
       ),
       arc72: new CONTRACT(
-        selectedToken.contractId,
+        selectedToken2.contractId,
         algodClient,
         indexerClient,
         abi.arc72,
@@ -394,24 +433,33 @@ export const Home: React.FC = () => {
         true
       ),
     };
+
     const buildN = [
-      builder.mp212.a_swap_list(
-        selectedToken.contractId,
-        selectedToken.tokenId,
-        selectedToken2.contractId,
-        selectedToken2.tokenId,
-        lastRound + 1000
+      builder.arc200.arc200_approve(
+        algosdk.getApplicationAddress(mp212),
+        10 * 1e6
       ),
       builder.arc72.arc72_approve(
         algosdk.getApplicationAddress(mp212),
-        selectedToken.tokenId
+        swap.tokenId2
       ),
+      builder.mp212.a_swap_execute(swapId),
     ];
+
     const buildP = (await Promise.all(buildN)).map(({ obj }) => obj);
-    ci.setExtraTxns(buildP);
+
     ci.setPaymentAmount(50900);
+    ci.setFee(8000);
+    ci.setExtraTxns(buildP);
+    ci.setAccounts([algosdk.getApplicationAddress(mp212)]);
     ci.setEnableGroupResourceSharing(true);
+
     const customR = await ci.custom();
+
+    console.log({ customR });
+
+    if (!customR.success) throw new Error("Failed to execute swap");
+
     await toast.promise(
       signTransactions(
         customR.txns.map(
@@ -423,19 +471,6 @@ export const Home: React.FC = () => {
         success: "Swap created successfully",
       }
     );
-    const evts = await ci.e_swap_ListEvent({ minRound: lastRound });
-    console.log({ evts });
-    // txId, round, ts, sId, cId, tId
-    const evt = evts.find(
-      (el: any) =>
-        selectedToken.contractId === Number(el[4]) &&
-        selectedToken.tokenId === Number(el[5])
-    );
-    console.log(evt);
-    if (evt) {
-      const [txId, round, ts, sId, cId, tId] = evt;
-      navigate(`/swap/${sId.toString()}`);
-    }
   };
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -447,7 +482,18 @@ export const Home: React.FC = () => {
   const open = Boolean(anchorEl);
   const id = open ? "simple-popper" : undefined;
 
-  const isLoading = false;
+  const isLoading = !swap;
+
+  const isValid = useMemo(() => {
+    if (!swap || lastRound <= 0 || !selectedToken) return false;
+    if (
+      swap.endTime <= lastRound ||
+      selectedToken.approved !== algosdk.getApplicationAddress(mp212)
+    )
+      return false;
+    return true;
+  }, [swap, lastRound, selectedToken]);
+
   return !isLoading ? (
     <Layout>
       <div
@@ -643,36 +689,56 @@ export const Home: React.FC = () => {
                 }
               >
                 <Grid item xs={12} sm={6}>
-                  <Box>
-                    <label style={{ color: "#fff" }}>NFT</label>
-                    <Autocomplete
-                      fullWidth
-                      disablePortal
-                      id="combo-box-demo"
-                      onChange={(e, newValue) => {
-                        setSelectedToken(newValue?.value);
-                      }}
-                      options={tokens.map((t) => {
-                        const tm = JSON.parse(t.metadata);
-                        return {
-                          label: tm.name,
-                          value: {
-                            ...t,
-                            metadata: tm,
-                          },
-                        };
-                      })}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          sx={{
-                            backgroundColor: "#fff",
-                            borderRadius: "10px",
+                  <Stack gap={2}>
+                    <Box>
+                      <label style={{ color: "#fff" }}>Owner</label>
+                      {selectedToken?.owner === activeAccount?.address ? (
+                        <span
+                          className="jockey-one-regular"
+                          style={{
+                            fontWeight: 900,
+                            color: "green",
+                            marginLeft: "10px",
                           }}
-                        />
-                      )}
-                    />
-                  </Box>
+                        >
+                          You
+                        </span>
+                      ) : null}
+                      <TextField
+                        variant="outlined"
+                        disabled
+                        value={selectedToken?.owner}
+                        fullWidth
+                        sx={{
+                          backgroundColor: "#fff",
+                          borderRadius: "10px",
+                        }}
+                        onChange={(e: any) => {
+                          setOwner(e.target.value);
+                        }}
+                      />
+                    </Box>
+                    <Box>
+                      <label style={{ color: "#fff" }}>NFT</label>
+                      <TextField
+                        fullWidth
+                        disabled
+                        value={selectedToken?.metadata?.name}
+                        sx={{ backgroundColor: "#fff", borderRadius: "10px" }}
+                      />
+                    </Box>
+                    <Box>
+                      <p
+                        className="blink_me jockey-one-regular"
+                        style={{
+                          fontWeight: 900,
+                          color: "#FFD54F",
+                        }}
+                      >
+                        Ready to swap
+                      </p>
+                    </Box>
+                  </Stack>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <img
@@ -702,7 +768,22 @@ export const Home: React.FC = () => {
                   <Stack gap={2}>
                     <Box>
                       <label style={{ color: "#fff" }}>Owner</label>
+                      {selectedToken2?.owner === activeAccount?.address ? (
+                        <span
+                          className="jockey-one-regular"
+                          style={{
+                            fontWeight: 900,
+                            color: "green",
+                            marginLeft: "10px",
+                          }}
+                        >
+                          You
+                        </span>
+                      ) : null}
                       <TextField
+                        variant="outlined"
+                        disabled
+                        value={selectedToken2?.owner}
                         fullWidth
                         sx={{
                           backgroundColor: "#fff",
@@ -715,32 +796,11 @@ export const Home: React.FC = () => {
                     </Box>
                     <Box>
                       <label style={{ color: "#fff" }}>NFT</label>
-                      <Autocomplete
+                      <TextField
                         fullWidth
-                        disablePortal
-                        id="combo-box-demo"
-                        onChange={(e, newValue) => {
-                          setSelectedToken2(newValue?.value);
-                        }}
-                        options={tokens2.map((t) => {
-                          const tm = JSON.parse(t.metadata);
-                          return {
-                            label: tm.name,
-                            value: {
-                              ...t,
-                              metadata: tm,
-                            },
-                          };
-                        })}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            sx={{
-                              backgroundColor: "#fff",
-                              borderRadius: "10px",
-                            }}
-                          />
-                        )}
+                        disabled
+                        value={selectedToken2?.metadata?.name}
+                        sx={{ backgroundColor: "#fff", borderRadius: "10px" }}
                       />
                     </Box>
                   </Stack>
@@ -753,19 +813,68 @@ export const Home: React.FC = () => {
                 </Grid>
               </Grid>
             </div>
-            <Button
-              onClick={handleSwapButtonClick}
-              size="large"
-              sx={{ borderRadius: "30px" }}
-              variant="contained"
-            >
-              Create Swap
-            </Button>
+            {isValid ? (
+              selectedToken.owner === activeAccount?.address || "" ? (
+                <Button
+                  onClick={handleCopy(
+                    `https://mechaswap.nautilus.sh/#/swap/${swapId}`
+                  )}
+                  size="large"
+                  sx={{ borderRadius: "30px" }}
+                  variant="contained"
+                >
+                  Share <ContentCopyIcon />
+                </Button>
+              ) : !activeAccount ? (
+                <Button
+                  onClick={handleWalletIconClick}
+                  size="large"
+                  sx={{ borderRadius: "30px" }}
+                  variant="contained"
+                >
+                  Connect Wallet
+                </Button>
+              ) : activeAccount?.address === selectedToken2?.owner ? (
+                <Button
+                  onClick={handleSwapButtonClick}
+                  size="large"
+                  sx={{ borderRadius: "30px" }}
+                  variant="contained"
+                >
+                  Swap
+                </Button>
+              ) : null
+            ) : (
+              <div style={{ textAlign: "center" }}>
+                <p
+                  style={{
+                    //color: "#FFD54F",
+                    fontWeight: 900,
+                    fontSize: "20px",
+                  }}
+                >
+                  Swap no longer available
+                </p>
+              </div>
+            )}
           </Stack>
         </Container>
       </div>
     </Layout>
   ) : (
-    <InterstitialBanner />
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        top: 0,
+        left: 0,
+        position: "absolute",
+        height: "100%",
+        width: "100%",
+      }}
+    >
+      <img src="/img/banner-mecha-swap.png" style={{ width: "100%" }} />
+    </div>
   );
 };

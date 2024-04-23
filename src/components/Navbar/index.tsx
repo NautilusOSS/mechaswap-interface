@@ -26,6 +26,7 @@ import { getAlgorandClients } from "../../wallets";
 import { arc200_balanceOf } from "ulujs/types/arc200";
 import VOIIcon from "static/crypto-icons/voi/0.svg";
 import VIAIcon from "static/crypto-icons/voi/6779767.svg";
+import HomeIcon from "@mui/icons-material/Home";
 
 const AccountIcon = () => {
   return (
@@ -238,7 +239,8 @@ const Navbar = () => {
     >
       <NavContainer>
         <Link to="/">
-          <NavLogo src={isDarkTheme ? DarkLogo : LightLogo} />
+          {/*<NavLogo src={isDarkTheme ? DarkLogo : LightLogo} /> */}
+          <HomeIcon fontSize="large" />
         </Link>
         <div
           style={{
@@ -248,7 +250,8 @@ const Navbar = () => {
           }}
         >
           <NavLinks>
-            {[
+            {/*[
+              
               {
                 label: "Buy",
                 href: "/listing",
@@ -276,7 +279,7 @@ const Navbar = () => {
                   {item.label}
                 </NavLink>
               )
-            )}
+                )*/}
           </NavLinks>
           <ul
             style={{
@@ -404,13 +407,13 @@ const Navbar = () => {
             </StyledLink>
           ) : null}
           <AccountContainer>
-            {activeAccount ? (
+            {/*activeAccount ? (
               <Link to={`/account/${activeAccount?.address}`}>
                 <AccountIconContainer>
                   <AccountIcon />
                 </AccountIconContainer>
               </Link>
-            ) : null}
+            ) : null*/}
             <ConnectWallet />
           </AccountContainer>
         </div>

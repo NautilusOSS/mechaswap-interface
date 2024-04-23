@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import axios from "axios";
 import styled from "styled-components";
-import { getTokens } from "../../store/tokenSlice";
+import { getTokens } from "../../store/nftTokenSlice";
 import { UnknownAction } from "@reduxjs/toolkit";
 import { getCollections } from "../../store/collectionSlice";
 import { getSales } from "../../store/saleSlice";
