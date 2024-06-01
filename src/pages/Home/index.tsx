@@ -516,6 +516,7 @@ export const Home: React.FC = () => {
         render: "All is good. See share link at bottom of page.",
         type: "success",
         isLoading: false,
+        autoClose: 2000,
       });
     } catch (e: any) {
       setShowButton(true);
