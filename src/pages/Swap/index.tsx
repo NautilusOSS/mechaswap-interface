@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Container,
+  Fade,
   Grid,
   IconButton,
   Popper,
@@ -243,7 +244,6 @@ export const Swap: React.FC = () => {
       });
   };
 
-  console.log({ swapId });
   const {
     activeAccount,
     providers,
@@ -251,6 +251,7 @@ export const Swap: React.FC = () => {
     sendTransactions,
     connectedAccounts,
   } = useWallet();
+  const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any>();
   const [owner, setOwner] = useState();
@@ -297,7 +298,6 @@ export const Swap: React.FC = () => {
       });
     });
   }, [swap]);
-  console.log({ tokens, tokens2, selectedToken, selectedToken2 });
   useEffect(() => {
     const customABI = {
       name: "",
@@ -342,7 +342,6 @@ export const Swap: React.FC = () => {
       }
     });
   }, [swapId, activeAccount]);
-  console.log({ swap });
   const handleWalletIconClick = () => {
     if (activeAccount) return;
     const provider = providers?.find((el) => el.metadata?.id === "kibisis");
@@ -355,122 +354,204 @@ export const Swap: React.FC = () => {
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
+    setShowButton(false);
     const { algodClient, indexerClient } = getAlgorandClients();
-    const status = await algodClient.status().do();
-    const lastRound = status["last-round"];
-    // TO get current block
-    const customABI = {
-      name: "",
-      desc: "",
-      methods: [
-        // custom()void
-        {
-          name: "custom",
-          args: [],
-          returns: {
-            type: "void",
-          },
-        },
-        // a_swap_execute(uint256)void
-        {
-          name: "a_swap_execute",
-          args: [
-            {
-              type: "uint256",
-              name: "listingId",
+    try {
+      const status = await algodClient.status().do();
+      const lastRound = status["last-round"];
+      // TO get current block
+      const customABI = {
+        name: "",
+        desc: "",
+        methods: [
+          // custom()void
+          {
+            name: "custom",
+            args: [],
+            returns: {
+              type: "void",
             },
-          ],
-          returns: {
-            type: "void",
           },
-        },
-      ],
-      events: [],
-    };
-    const VIA = 6779767;
-    const ci = new CONTRACT(VIA, algodClient, indexerClient, customABI, {
-      addr: activeAccount.address,
-      sk: new Uint8Array(0),
-    });
-    const builder = {
-      arc200: new CONTRACT(
-        VIA,
-        algodClient,
-        indexerClient,
-        abi.arc200,
-        {
-          addr: activeAccount.address,
-          sk: new Uint8Array(0),
-        },
-        true,
-        false,
-        true
-      ),
-      mp212: new CONTRACT(
-        mp212,
-        algodClient,
-        indexerClient,
-        customABI,
-        {
-          addr: activeAccount.address,
-          sk: new Uint8Array(0),
-        },
-        true,
-        false,
-        true
-      ),
-      arc72: new CONTRACT(
-        selectedToken2.contractId,
-        algodClient,
-        indexerClient,
-        abi.arc72,
-        {
-          addr: activeAccount.address,
-          sk: new Uint8Array(0),
-        },
-        true,
-        false,
-        true
-      ),
-    };
+          // a_swap_execute(uint256)void
+          {
+            name: "a_swap_execute",
+            args: [
+              {
+                type: "uint256",
+                name: "listingId",
+              },
+            ],
+            returns: {
+              type: "void",
+            },
+          },
+        ],
+        events: [],
+      };
+      const VIA = 6779767;
+      const ci = new CONTRACT(VIA, algodClient, indexerClient, customABI, {
+        addr: activeAccount.address,
+        sk: new Uint8Array(0),
+      });
+      const builder = {
+        arc200: new CONTRACT(
+          VIA,
+          algodClient,
+          indexerClient,
+          abi.arc200,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(0),
+          },
+          true,
+          false,
+          true
+        ),
+        mp212: new CONTRACT(
+          mp212,
+          algodClient,
+          indexerClient,
+          customABI,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(0),
+          },
+          true,
+          false,
+          true
+        ),
+        arc722: new CONTRACT(
+          selectedToken.contractId,
+          algodClient,
+          indexerClient,
+          abi.arc72,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(0),
+          },
+          true,
+          false,
+          true
+        ),
+        arc72: new CONTRACT(
+          selectedToken2.contractId,
+          algodClient,
+          indexerClient,
+          abi.arc72,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(0),
+          },
+          true,
+          false,
+          true
+        ),
+      };
 
-    const buildN = [
-      builder.arc200.arc200_approve(
-        algosdk.getApplicationAddress(mp212),
-        10 * 1e6
-      ),
-      builder.arc72.arc72_approve(
-        algosdk.getApplicationAddress(mp212),
-        swap.tokenId2
-      ),
-      builder.mp212.a_swap_execute(swapId),
-    ];
+      const tokAddr = algosdk.getApplicationAddress(selectedToken.contractId);
+      const tokAddr2 = algosdk.getApplicationAddress(selectedToken2.contractId);
 
-    const buildP = (await Promise.all(buildN)).map(({ obj }) => obj);
+      const accountInfo = await algodClient.accountInformation(tokAddr).do();
+      const accountInfo2 = await algodClient.accountInformation(tokAddr2).do();
 
-    ci.setPaymentAmount(50900);
-    ci.setFee(8000);
-    ci.setExtraTxns(buildP);
-    ci.setAccounts([algosdk.getApplicationAddress(mp212)]);
-    ci.setEnableGroupResourceSharing(true);
+      // I am guessing that sometimes the collection app address is below the min balance which prevents operations like transfers
+      //   If available below zero provide the difference
 
-    const customR = await ci.custom();
+      const [p4, p5] = [accountInfo, accountInfo2].map((accInfo) =>
+        accountInfo.amount >= accountInfo["min-balance"]
+          ? 0
+          : Math.abs(accountInfo.amount - accountInfo["min-balance"])
+      );
 
-    console.log({ customR });
-
-    if (!customR.success) throw new Error("Failed to execute swap");
-
-    await toast.promise(
-      signTransactions(
-        customR.txns.map(
-          (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-        )
-      ).then(sendTransactions),
-      {
-        pending: "Pending transaction to create swap",
-        success: "Swap created successfully",
+      let customR;
+      for (const p1 of /*a_swap_execute pmt*/ [0, 50900]) {
+        for (const p2 of /*arc200_approve pmt*/ [0, 28100]) {
+          for (const p3 of /*arc72_approve pmt*/ [0, 28500]) {
+            const buildO = [];
+            const transfers = [];
+            // apply tokens towards collection minimum balance
+            if (p4 > 0) {
+              transfers.push([p4, tokAddr]);
+            }
+            // apply tokens towards collection minimum balance
+            if (p5 > 0) {
+              transfers.push([p5, tokAddr2]);
+            }
+            // arc200_approve spending 10 VIA to mechaswap
+            do {
+              const feeCharge = 10;
+              const { obj } = await builder.arc200.arc200_approve(
+                algosdk.getApplicationAddress(mp212),
+                feeCharge * 1e6
+              );
+              const txnO = {
+                ...obj,
+                payment: p2,
+                note: new TextEncoder().encode(
+                  `arc200_approve spending ${feeCharge} VIA`
+                ),
+              };
+              buildO.push(txnO);
+            } while (0);
+            // arc72_approve transfer of nft
+            do {
+              const { obj } = await builder.arc72.arc72_approve(
+                algosdk.getApplicationAddress(mp212),
+                swap.tokenId2
+              );
+              const txnO = {
+                ...obj,
+                payment: p3,
+                note: new TextEncoder().encode(`
+                arc72_approve nft transfer
+                `),
+              };
+              buildO.push(txnO);
+            } while (0);
+            // a_swap_execute
+            do {
+              const { obj } = await builder.mp212.a_swap_execute(swapId);
+              const txnO = {
+                ...obj,
+                payment: p1,
+                note: new TextEncoder().encode(`
+                a_swap_excute nft swap
+                `),
+              };
+              buildO.push(txnO);
+            } while (0);
+            ci.setTransfers(transfers);
+            ci.setPaymentAmount(50900);
+            ci.setFee(8000);
+            ci.setExtraTxns(buildO);
+            ci.setAccounts([algosdk.getApplicationAddress(mp212)]);
+            ci.setEnableGroupResourceSharing(true);
+            customR = await ci.custom();
+            if (customR.success) break;
+          }
+          if (customR.success) break;
+        }
+        if (customR.success) break;
       }
-    );
+
+      if (!customR.success) throw new Error("Failed to execute swap");
+
+      await toast.promise(
+        signTransactions(
+          customR.txns.map(
+            (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+          )
+        ).then(sendTransactions),
+        {
+          pending: "Pending transaction to create swap",
+          success: "Swap created successfully",
+        }
+      );
+    } catch (e: any) {
+      setShowButton(true);
+      console.log(e);
+      toast.error(e.message);
+    }
   };
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -813,50 +894,52 @@ export const Swap: React.FC = () => {
                 </Grid>
               </Grid>
             </div>
-            {isValid ? (
-              selectedToken.owner === activeAccount?.address || "" ? (
-                <Button
-                  onClick={handleCopy(
-                    `https://mechaswap.nautilus.sh/#/swap/${swapId}`
-                  )}
-                  size="large"
-                  sx={{ borderRadius: "30px" }}
-                  variant="contained"
-                >
-                  Share <ContentCopyIcon />
-                </Button>
-              ) : !activeAccount ? (
-                <Button
-                  onClick={handleWalletIconClick}
-                  size="large"
-                  sx={{ borderRadius: "30px" }}
-                  variant="contained"
-                >
-                  Connect Wallet
-                </Button>
-              ) : activeAccount?.address === selectedToken2?.owner ? (
-                <Button
-                  onClick={handleSwapButtonClick}
-                  size="large"
-                  sx={{ borderRadius: "30px" }}
-                  variant="contained"
-                >
-                  Swap
-                </Button>
-              ) : null
-            ) : (
-              <div style={{ textAlign: "center" }}>
-                <p
-                  style={{
-                    //color: "#FFD54F",
-                    fontWeight: 900,
-                    fontSize: "20px",
-                  }}
-                >
-                  Swap no longer available
-                </p>
-              </div>
-            )}
+            {showButton ? (
+              isValid ? (
+                selectedToken.owner === activeAccount?.address || "" ? (
+                  <Button
+                    onClick={handleCopy(
+                      `https://mechaswap.nautilus.sh/#/swap/${swapId}`
+                    )}
+                    size="large"
+                    sx={{ borderRadius: "30px" }}
+                    variant="contained"
+                  >
+                    Share <ContentCopyIcon />
+                  </Button>
+                ) : !activeAccount ? (
+                  <Button
+                    onClick={handleWalletIconClick}
+                    size="large"
+                    sx={{ borderRadius: "30px" }}
+                    variant="contained"
+                  >
+                    Connect Wallet
+                  </Button>
+                ) : activeAccount?.address === selectedToken2?.owner ? (
+                  <Button
+                    onClick={handleSwapButtonClick}
+                    size="large"
+                    sx={{ borderRadius: "30px" }}
+                    variant="contained"
+                  >
+                    Swap
+                  </Button>
+                ) : null
+              ) : (
+                <div style={{ textAlign: "center" }}>
+                  <p
+                    style={{
+                      //color: "#FFD54F",
+                      fontWeight: 900,
+                      fontSize: "20px",
+                    }}
+                  >
+                    Swap no longer available
+                  </p>
+                </div>
+              )
+            ) : null}
           </Stack>
         </Container>
       </div>

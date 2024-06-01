@@ -251,6 +251,7 @@ export const Home: React.FC = () => {
     sendTransactions,
     connectedAccounts,
   } = useWallet();
+  const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any>();
   const [owner, setOwner] = useState();
@@ -283,158 +284,243 @@ export const Home: React.FC = () => {
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
-    const mp212 = 40433943;
-    const { algodClient, indexerClient } = getAlgorandClients();
-    const status = await algodClient.status().do();
-    const lastRound = status["last-round"];
-    // TO get current block
-    const customABI = {
-      name: "",
-      desc: "",
-      methods: [
-        // custom()void
-        {
-          name: "custom",
-          args: [],
-          returns: {
-            type: "void",
+    setShowButton(false);
+    try {
+      const mp212 = 40433943;
+      const { algodClient, indexerClient } = getAlgorandClients();
+      const status = await algodClient.status().do();
+      const lastRound = status["last-round"];
+      // TO get current block
+      const customABI = {
+        name: "",
+        desc: "",
+        methods: [
+          // custom()void
+          {
+            name: "custom",
+            args: [],
+            returns: {
+              type: "void",
+            },
           },
-        },
-        // a_swap_list(uint64,uint256,uint64,uint256,uint64)uint256
-        {
-          name: "a_swap_list",
-          args: [
-            {
-              type: "uint64",
-              name: "contractId",
-            },
-            {
+          // a_swap_list(uint64,uint256,uint64,uint256,uint64)uint256
+          {
+            name: "a_swap_list",
+            args: [
+              {
+                type: "uint64",
+                name: "contractId",
+              },
+              {
+                type: "uint256",
+                name: "tokenId",
+              },
+              {
+                type: "uint64",
+                name: "collectionId2",
+              },
+              {
+                type: "uint256",
+                name: "tokenId2",
+              },
+              {
+                type: "uint64",
+                name: "endTime",
+              },
+            ],
+            returns: {
               type: "uint256",
-              name: "tokenId",
             },
-            {
-              type: "uint64",
-              name: "collectionId2",
-            },
-            {
-              type: "uint256",
-              name: "tokenId2",
-            },
-            {
-              type: "uint64",
-              name: "endTime",
-            },
-          ],
-          returns: {
-            type: "uint256",
           },
-        },
-      ],
-      events: [
-        {
-          name: "e_swap_ListEvent",
-          args: [
-            {
-              type: "uint256",
-              name: "listingId",
-            },
-            {
-              type: "uint64",
-              name: "contractId",
-            },
-            {
-              type: "uint256",
-              name: "tokenId",
-            },
-            {
-              type: "uint64",
-              name: "contractId2",
-            },
-            {
-              type: "uint256",
-              name: "tokenId2",
-            },
-            {
-              type: "uint64",
-              name: "endTime",
-            },
-          ],
-        },
-      ],
-    };
-    const ci = new CONTRACT(mp212, algodClient, indexerClient, customABI, {
-      addr: activeAccount.address,
-      sk: new Uint8Array(0),
-    });
-    const builder = {
-      mp212: new CONTRACT(
-        mp212,
-        algodClient,
-        indexerClient,
-        customABI,
-        {
-          addr: activeAccount.address,
-          sk: new Uint8Array(0),
-        },
-        true,
-        false,
-        true
-      ),
-      arc72: new CONTRACT(
-        selectedToken.contractId,
-        algodClient,
-        indexerClient,
-        abi.arc72,
-        {
-          addr: activeAccount.address,
-          sk: new Uint8Array(0),
-        },
-        true,
-        false,
-        true
-      ),
-    };
-    const buildN = [
-      builder.mp212.a_swap_list(
-        selectedToken.contractId,
-        selectedToken.tokenId,
-        selectedToken2.contractId,
-        selectedToken2.tokenId,
-        lastRound + 1000
-      ),
-      builder.arc72.arc72_approve(
-        algosdk.getApplicationAddress(mp212),
-        selectedToken.tokenId
-      ),
-    ];
-    const buildP = (await Promise.all(buildN)).map(({ obj }) => obj);
-    ci.setExtraTxns(buildP);
-    ci.setPaymentAmount(50900);
-    ci.setEnableGroupResourceSharing(true);
-    const customR = await ci.custom();
-    await toast.promise(
-      signTransactions(
-        customR.txns.map(
-          (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-        )
-      ).then(sendTransactions),
-      {
-        pending: "Pending transaction to create swap",
-        success: "Swap created successfully",
+        ],
+        events: [
+          {
+            name: "e_swap_ListEvent",
+            args: [
+              {
+                type: "uint256",
+                name: "listingId",
+              },
+              {
+                type: "uint64",
+                name: "contractId",
+              },
+              {
+                type: "uint256",
+                name: "tokenId",
+              },
+              {
+                type: "uint64",
+                name: "contractId2",
+              },
+              {
+                type: "uint256",
+                name: "tokenId2",
+              },
+              {
+                type: "uint64",
+                name: "endTime",
+              },
+            ],
+          },
+        ],
+      };
+      const ci = new CONTRACT(mp212, algodClient, indexerClient, customABI, {
+        addr: activeAccount.address,
+        sk: new Uint8Array(0),
+      });
+      const builder = {
+        mp212: new CONTRACT(
+          mp212,
+          algodClient,
+          indexerClient,
+          customABI,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(0),
+          },
+          true,
+          false,
+          true
+        ),
+        arc722: new CONTRACT(
+          selectedToken2.contractId,
+          algodClient,
+          indexerClient,
+          abi.arc72,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(0),
+          },
+          true,
+          false,
+          true
+        ),
+        arc72: new CONTRACT(
+          selectedToken.contractId,
+          algodClient,
+          indexerClient,
+          abi.arc72,
+          {
+            addr: activeAccount.address,
+            sk: new Uint8Array(0),
+          },
+          true,
+          false,
+          true
+        ),
+      };
+
+      const tokAddr = algosdk.getApplicationAddress(selectedToken.contractId);
+      const tokAddr2 = algosdk.getApplicationAddress(selectedToken2.contractId);
+
+      const accountInfo = await algodClient.accountInformation(tokAddr).do();
+      const accountInfo2 = await algodClient.accountInformation(tokAddr2).do();
+
+      // I am guessing that sometimes the collection app address is below the min balance which prevents operations like transfers
+      //   If available below zero provide the difference
+
+      const [p4, p5] = [accountInfo, accountInfo2].map((accInfo) =>
+        accountInfo.amount >= accountInfo["min-balance"]
+          ? 0
+          : Math.abs(accountInfo.amount - accountInfo["min-balance"])
+      );
+
+      let customR;
+      for (const p1 of /*arc72 approve pmt*/ [0, 28500]) {
+        const buildO = [];
+        const transfers = [];
+        // apply tokens towards collection minimum balance
+        if (p4 > 0) {
+          transfers.push([p4, tokAddr]);
+        }
+        // apply tokens towards collection minimum balance
+        if (p5 > 0) {
+          transfers.push([p5, tokAddr2]);
+        }
+        do {
+          const { obj } = await builder.mp212.a_swap_list(
+            selectedToken.contractId,
+            selectedToken.tokenId,
+            selectedToken2.contractId,
+            selectedToken2.tokenId,
+            lastRound + 1000
+          );
+          const txnO = {
+            ...obj,
+            note: new TextEncoder().encode(`
+            a_swap_list nft swap list
+            `),
+          };
+          buildO.push(txnO);
+        } while (0);
+        do {
+          const { obj } = await builder.arc72.arc72_approve(
+            algosdk.getApplicationAddress(mp212),
+            selectedToken.tokenId
+          );
+          const txnO = {
+            ...obj,
+            payment: p1,
+            note: new TextEncoder().encode(`
+            arc72_approve nft transfer
+            `),
+          };
+          buildO.push(txnO);
+        } while (0);
+        ci.setTransfers(transfers);
+        ci.setPaymentAmount(50900);
+        ci.setExtraTxns(buildO);
+        ci.setEnableGroupResourceSharing(true);
+        customR = await ci.custom();
+        if (customR.success) break;
       }
-    );
-    const evts = await ci.e_swap_ListEvent({ minRound: lastRound });
-    console.log({ evts });
-    // txId, round, ts, sId, cId, tId
-    const evt = evts.find(
-      (el: any) =>
-        selectedToken.contractId === Number(el[4]) &&
-        selectedToken.tokenId === Number(el[5])
-    );
-    console.log(evt);
-    if (evt) {
-      const [txId, round, ts, sId, cId, tId] = evt;
-      navigate(`/swap/${sId.toString()}`);
+      if (!customR.success) throw new Error(customR.error);
+      await toast.promise(
+        signTransactions(
+          customR.txns.map(
+            (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+          )
+        ).then(sendTransactions),
+        {
+          pending: "Pending transaction to create swap",
+          success: "Swap created successfully",
+        }
+      );
+      const id = toast.loading(
+        "Waiting for confirmation. Page will redirect momemntarily."
+      );
+      let evt: any[] | undefined;
+      do {
+        try {
+          const evts = await ci.e_swap_ListEvent({ minRound: lastRound });
+          console.log({ evts });
+          // txId, round, ts, sId, cId, tId
+          evt = evts.find(
+            (el: any) =>
+              selectedToken.contractId === Number(el[4]) &&
+              selectedToken.tokenId === Number(el[5])
+          );
+        } catch (e: any) {
+          console.log(e);
+        }
+        await new Promise((res) => setTimeout(res, 2000));
+      } while (!evt);
+      await new Promise((res) => setTimeout(res, 2000));
+      console.log(evt);
+      if (evt) {
+        const [, , , sId, ,] = evt;
+        navigate(`/swap/${sId.toString()}`);
+      }
+      toast.update(id, {
+        render: "All is good. See share link at bottom of page.",
+        type: "success",
+        isLoading: false,
+      });
+    } catch (e: any) {
+      setShowButton(true);
+      console.log(e);
+      toast.error(e.message);
     }
   };
 
@@ -753,14 +839,16 @@ export const Home: React.FC = () => {
                 </Grid>
               </Grid>
             </div>
-            <Button
-              onClick={handleSwapButtonClick}
-              size="large"
-              sx={{ borderRadius: "30px" }}
-              variant="contained"
-            >
-              Create Swap
-            </Button>
+            {showButton ? (
+              <Button
+                onClick={handleSwapButtonClick}
+                size="large"
+                sx={{ borderRadius: "30px" }}
+                variant="contained"
+              >
+                Create Swap
+              </Button>
+            ) : null}
           </Stack>
         </Container>
       </div>

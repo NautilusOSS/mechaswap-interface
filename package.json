@@ -41,7 +41,7 @@
     "react-toastify": "^10.0.4",
     "redux-persist": "^6.0.0",
     "styled-components": "^6.1.8",
-    "ulujs": "^0.3.4",
+    "ulujs": "^0.9.8",
     "usehooks-ts": "^2.16.0"
   },
   "devDependencies": {
