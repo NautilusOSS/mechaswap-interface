@@ -543,8 +543,8 @@ export const Swap: React.FC = () => {
           )
         ).then(sendTransactions),
         {
-          pending: "Pending transaction to create swap",
-          success: "Swap created successfully",
+          pending: "Pending transaction to execute swap",
+          success: "Swap executed successfully",
         }
       );
     } catch (e: any) {

@@ -506,17 +506,17 @@ export const Home: React.FC = () => {
         }
         await new Promise((res) => setTimeout(res, 2000));
       } while (!evt);
-      await new Promise((res) => setTimeout(res, 2000));
+      await new Promise((res) => setTimeout(res, 4000));
       console.log(evt);
       if (evt) {
         const [, , , sId, ,] = evt;
         navigate(`/swap/${sId.toString()}`);
       }
       toast.update(id, {
-        render: "All is good. See share link at bottom of page.",
+        render: "All is good. See share link at bottom of page. Reload page if neccesary.",
         type: "success",
         isLoading: false,
-        autoClose: 2000,
+        autoClose: 5000,
       });
     } catch (e: any) {
       setShowButton(true);
