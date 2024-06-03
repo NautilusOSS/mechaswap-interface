@@ -50,6 +50,7 @@ import WalletIcon from "static/icon-wallet.svg";
 import RecycleIcon from "static/icon-recyclebin.svg";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useCopyToClipboard } from "usehooks-ts";
+import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 
 const ActivityFilterContainer = styled.div`
   display: flex;
@@ -547,6 +548,27 @@ export const Swap: React.FC = () => {
           success: "Swap executed successfully",
         }
       );
+
+      // -----------------------------------------
+      // QUEST HERE swap_list_once
+      // -----------------------------------------
+      do {
+        const address = activeAccount.address;
+        const actions: string[] = [QUEST_ACTION.SWAP_EXECUTE_ONCE];
+        const {
+          data: { results },
+        } = await getActions(address);
+        for (const action of actions) {
+          const address = activeAccount.address;
+          const key = `${action}:${address}`;
+          const completedAction = results.find((el: any) => el.key === key);
+          if (!completedAction) {
+            await submitAction(action, address);
+          }
+          // TODO notify quest completion here
+        }
+      } while (0);
+      // -----------------------------------------
     } catch (e: any) {
       setShowButton(true);
       console.log(e);

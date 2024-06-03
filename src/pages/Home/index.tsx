@@ -47,6 +47,7 @@ import { arc200_balanceOf } from "ulujs/types/arc200";
 import BigNumber from "bignumber.js";
 import WalletIcon from "static/icon-wallet.svg";
 import RecycleIcon from "static/icon-recyclebin.svg";
+import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 
 const ActivityFilterContainer = styled.div`
   display: flex;
@@ -513,11 +514,32 @@ export const Home: React.FC = () => {
         navigate(`/swap/${sId.toString()}`);
       }
       toast.update(id, {
-        render: "All is good. See share link at bottom of page. Reload page if neccesary.",
+        render:
+          "All is good. See share link at bottom of page. Reload page if neccesary.",
         type: "success",
         isLoading: false,
         autoClose: 5000,
       });
+      // -----------------------------------------
+      // QUEST HERE swap_list_once
+      // -----------------------------------------
+      do {
+        const address = activeAccount.address;
+        const actions: string[] = [QUEST_ACTION.SWAP_LIST_ONCE];
+        const {
+          data: { results },
+        } = await getActions(address);
+        for (const action of actions) {
+          const address = activeAccount.address;
+          const key = `${action}:${address}`;
+          const completedAction = results.find((el: any) => el.key === key);
+          if (!completedAction) {
+            await submitAction(action, address);
+          }
+          // TODO notify quest completion here
+        }
+      } while (0);
+      // -----------------------------------------
     } catch (e: any) {
       setShowButton(true);
       console.log(e);
