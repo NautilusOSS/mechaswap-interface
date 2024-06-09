@@ -556,6 +556,30 @@ export const Home: React.FC = () => {
   const open = Boolean(anchorEl);
   const id = open ? "simple-popper" : undefined;
 
+  React.useEffect(() => {
+    if (!activeAccount) return;
+    // -----------------------------------------
+    // QUEST HERE hmbl_pool_swap
+    // -----------------------------------------
+    const address = activeAccount.address;
+    const actions: string[] = [QUEST_ACTION.CONNECT_WALLET];
+    (async () => {
+      const {
+        data: { results },
+      } = await getActions(address);
+      for (const action of actions) {
+        const address = activeAccount.address;
+        const key = `${action}:${address}`;
+        const completedAction = results.find((el: any) => el.key === key);
+        if (!completedAction) {
+          await submitAction(action, address);
+        }
+        // TODO notify quest completion here
+      }
+    })();
+    // -----------------------------------------
+  }, [activeAccount]);
+
   const isLoading = false;
   return !isLoading ? (
     <Layout>

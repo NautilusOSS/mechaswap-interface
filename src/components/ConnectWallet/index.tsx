@@ -6,6 +6,7 @@ import { Box } from "@mui/material";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { Link } from "react-router-dom";
+import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 
 const WalletIcon2 = () => {
   return (
@@ -456,6 +457,30 @@ function BasicMenu() {
   const isDarkTheme = useSelector(
     (state: RootState) => state.theme.isDarkTheme
   );
+  React.useEffect(() => {
+    if (!activeAccount) return;
+    // -----------------------------------------
+    // QUEST HERE hmbl_pool_swap
+    // -----------------------------------------
+    const address = activeAccount.address;
+    const actions: string[] = [QUEST_ACTION.CONNECT_WALLET];
+    (async () => {
+      const {
+        data: { results },
+      } = await getActions(address);
+      for (const action of actions) {
+        const address = activeAccount.address;
+        const key = `${action}:${address}`;
+        const completedAction = results.find((el: any) => el.key === key);
+        if (!completedAction) {
+          await submitAction(action, address);
+        }
+        // TODO notify quest completion here
+      }
+    })();
+    // -----------------------------------------
+  }, [activeAccount]);
+  // -----------------------------------------
   return (
     <div>
       {!activeAccount ? (
@@ -594,17 +619,18 @@ function BasicMenu() {
                             </AccountName>
                           </AccountNameContainer>
                           <ActiveButtonContainer>
-                            {account.address !== activeAccount?.address ? (
-                              <ActiveButton
-                                onClick={(e: any) => {
-                                  provider?.setActiveProvider();
-                                  provider?.setActiveAccount(account.address);
-                                }}
-                              >
-                                Set Active
-                              </ActiveButton>
-                            ) : null
-                            /*
+                            {
+                              account.address !== activeAccount?.address ? (
+                                <ActiveButton
+                                  onClick={(e: any) => {
+                                    provider?.setActiveProvider();
+                                    provider?.setActiveAccount(account.address);
+                                  }}
+                                >
+                                  Set Active
+                                </ActiveButton>
+                              ) : null
+                              /*
                               <Link to={`/account/${account.address}`}>
                                 <ActiveButton>View gallery</ActiveButton>
                               </Link>
