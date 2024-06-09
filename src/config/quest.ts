@@ -1,6 +1,9 @@
 import axios from "axios";
 
 export const QUEST_API = "https://quest.nautilus.sh";
+export const MECHASWAP_QUEST_API = "https://mechaswap-quest.nautilus.sh";
+
+const questAPI = MECHASWAP_QUEST_API;
 
 export enum QUEST_ACTION {
   CONNECT_WALLET = "connect_wallet",
@@ -14,7 +17,7 @@ export enum QUEST_ACTION {
 }
 
 export const getActions = (address: string) => {
-  return axios.get(`${QUEST_API}/quest`, {
+  return axios.get(`${questAPI}/quest`, {
     params: {
       key: address,
     },
@@ -23,7 +26,7 @@ export const getActions = (address: string) => {
 
 export const submitAction = (action: string, address: string, params = {}) => {
   return axios.post(
-    `${QUEST_API}/quest`,
+    `${questAPI}/quest`,
     {
       action,
       data: {
